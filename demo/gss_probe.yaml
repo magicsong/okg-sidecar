@@ -1,0 +1,116 @@
+apiVersion: serverless.vke.volcengine.com/v1alpha1
+kind: SidecarConfig
+metadata:
+  name: probe-kruise-game
+spec:
+  injection:
+    selector:
+      matchLabels:
+        game.kruise.io/owner-gss: kidecar-game
+    namespace: default
+    serviceAccountName: sidecar-service-account
+    shareProcessNamespace: true
+    useKubeNativeSidecar: false
+    injectKidecar: true
+  kidecar:
+    plugins:
+    - name: grpc
+      bootOrder: 2
+      config:
+        port: 12345
+    - name: kubectl-proxy
+      binary:
+       path: /usr/local/bin/kubectl
+       version: "1.0.0"
+       args: ["proxy", "--port=8081"]
+       env: ["ENV_VAR=value"]
+       permissions: "700"
+       description: "This is kubectl proxy plugin"
+    - name: http_probe
+      config:
+        startDelaySeconds: 60
+        endpoints:
+          - url: "http://localhost:8080"               # 目标 URL
+            method: "GET"                           # HTTP 方法
+            # headers:                               # 请求头
+            #   Content-Type: "application/json"
+            #   Authorization: "Bearer your_token"
+            timeout: 30                             # 超时时间（秒）
+            expectedStatusCode: 200                 # 预期的 HTTP 状态码
+            storageConfig:                          # 存储配置
+              type: InKube
+              inKube:
+              #annotationKey: http_probe
+                target:
+                    group:  game.kruise.io
+                    version: v1alpha1
+                    resource: gameservers
+                    name: ${SELF:POD_NAME}
+                    namespace: ${SELF:POD_NAMESPACE}
+                jsonPath: /spec/opsState
+                markerPolices:
+                  - state: idle
+                    labels:
+                      gameserver-idle: 'true'
+                    annotations:
+                      controller.kubernetes.io/pod-deletion-cost: '-10'
+                  - state: allocated
+                    labels:
+                      gameserver-idle: 'false'
+                    annotations:
+                      controller.kubernetes.io/pod-deletion-cost: '10'
+                  - state: unknown
+                    labels:
+                      gameserver-idle: 'false'
+                    annotations:
+                      controller.kubernetes.io/pod-deletion-cost: '5'
+      bootOrder: 1
+    restartPolicy: Always
+    resources:
+      CPU: 100m
+      Memory: 128Mi
+    sidecarStartOrder: Before
+
+---
+##service account
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: sidecar-service-account
+  namespace: default
+---
+##rolebinding
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: sidecar-rolebinding
+  namespace: default
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+- kind: ServiceAccount
+  name: sidecar-service-account
+  namespace: default
+
+
+# ---
+# apiVersion: keda.sh/v1alpha1
+# kind: ScaledObject
+# metadata:
+#   name: workload-scaledobject
+#   namespace: default
+# spec:
+#   scaleTargetRef:
+#     name: kidecar-game-deployment
+#   minReplicaCount: 1  # 设置最小副本数为1
+#   maxReplicaCount: 10 # 你可以根据需求调整最大副本数
+#   pollingInterval: 30 # 每30秒检查一次负载
+#   cooldownPeriod:  300 # 缩容操作后的冷却时间，以秒为单位
+#   triggers:
+#   - type: kubernetes-workload
+#     metadata:
+#       podSelector: 'app=kidecar-game, gameserver-idle=false'
+#       value: '0.9'  # 房间占比率大于90%时，触发扩容
+#       activationValue: '0.5' # 激活阈值，也即缩容的触发条件

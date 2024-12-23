@@ -150,5 +150,8 @@ func generatePatch(data string, myconfig *InKubeConfig) []jsonpatch.JsonPatchOpe
 			}
 		}
 	}
+	if myconfig.JsonPath != nil {
+		patch = append(patch, jsonpatch.NewOperation("replace", *myconfig.JsonPath, data))
+	}
 	return patch
 }

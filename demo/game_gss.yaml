@@ -1,17 +1,14 @@
-apiVersion: apps/v1
-kind: Deployment
+apiVersion: game.kruise.io/v1alpha1
+kind: GameServerSet
 metadata:
-  name: kidecar-game-deployment
+  name: kidecar-game
   namespace: default
 spec:
   replicas: 2
-  selector:
-    matchLabels:
-      app: kidecar-game
-  template:
-    metadata:
-      labels:
-        app: kidecar-game
+  updateStrategy:
+    rollingUpdate:
+      podUpdatePolicy: InPlaceIfPossible
+  gameServerTemplate:
     spec:
       containers:
       - name: kidecar-game

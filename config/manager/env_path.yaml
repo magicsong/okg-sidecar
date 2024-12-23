@@ -10,4 +10,4 @@ spec:
       - name: manager
         env:
           - name: KIDECAR_IMAGE
-            value: 113745426946.dkr.ecr.us-east-1.amazonaws.com/xuetaotest/kidecar:v1.2
+            value: 113745426946.dkr.ecr.us-east-1.amazonaws.com/xuetaotest/kidecar:v1.9
