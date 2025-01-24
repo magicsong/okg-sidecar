@@ -57,6 +57,8 @@ type ProbeMarkerPolicy struct {
 	Labels map[string]string `json:"labels,omitempty"`
 	// Patch annotations pod.annotations
 	Annotations map[string]string `json:"annotations,omitempty"`
+	// Patch JSONPath
+	JsonPathConfigs []JSONPathConfig `json:"jsonPathConfigs,omitempty"`
 }
 
 type FieldType string
@@ -68,8 +70,9 @@ const (
 )
 
 type JSONPathConfig struct {
-	JSONPath  string    `json:"jsonPath"`  // JSONPath 表达式
-	FieldType FieldType `json:"fieldType"` // 提取结果的数据类型
+	JSONPath  string      `json:"jsonPath"`  // JSONPath 表达式
+	FieldType FieldType   `json:"fieldType"` // 提取结果的数据类型
+	Value     interface{} `json:"value"`     // 填的值
 }
 
 func (s *StorageConfig) StoreData(factory StorageFactory, data string) error {

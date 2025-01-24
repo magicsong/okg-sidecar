@@ -149,6 +149,11 @@ func generatePatch(data string, myconfig *InKubeConfig) []jsonpatch.JsonPatchOpe
 				patch = append(patch, jsonpatch.NewOperation("replace", "/metadata/labels/"+rfc6901Encoder.Replace(key), value))
 			}
 		}
+		if len(policy.JsonPathConfigs) > 0 {
+			for _, jsonPathConfig := range policy.JsonPathConfigs {
+				patch = append(patch, jsonpatch.NewOperation("replace", jsonPathConfig.JSONPath, jsonPathConfig.Value))
+			}
+		}
 	}
 	if myconfig.JsonPath != nil {
 		patch = append(patch, jsonpatch.NewOperation("replace", *myconfig.JsonPath, data))
